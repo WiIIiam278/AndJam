@@ -7,10 +7,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A builder for {@link Toast} messages
+ * A toaster, a.k.a. a builder for {@link Toast} messages
  */
 @SuppressWarnings("unused")
-public class ToastBuilder {
+public class Toaster {
 
     @NotNull
     private final JavaPlugin plugin;
@@ -28,7 +28,7 @@ public class ToastBuilder {
      *
      * @param plugin The plugin that is sending the toast
      */
-    ToastBuilder(@NotNull JavaPlugin plugin) {
+    Toaster(@NotNull JavaPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -39,7 +39,7 @@ public class ToastBuilder {
      * @return The toast builder
      */
     @NotNull
-    public ToastBuilder setTitle(@NotNull Component title) {
+    public Toaster setTitle(@NotNull Component title) {
         this.title = title;
         return this;
     }
@@ -51,7 +51,7 @@ public class ToastBuilder {
      * @return The builder
      */
     @NotNull
-    public ToastBuilder setDescription(@NotNull Component description) {
+    public Toaster setDescription(@NotNull Component description) {
         this.description = description;
         return this;
     }
@@ -63,7 +63,7 @@ public class ToastBuilder {
      * @return The toast builder
      */
     @NotNull
-    public ToastBuilder setIcon(@NotNull Material icon) {
+    public Toaster setIcon(@NotNull Material icon) {
         this.icon = icon;
         return this;
     }
@@ -75,7 +75,7 @@ public class ToastBuilder {
      * @return The toast builder
      */
     @NotNull
-    public ToastBuilder setFrameType(@NotNull FrameType frameType) {
+    public Toaster setFrameType(@NotNull FrameType frameType) {
         this.frameType = frameType;
         return this;
     }
