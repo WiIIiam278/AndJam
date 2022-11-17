@@ -3,7 +3,6 @@ package net.william278.andjam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.roxeez.advancement.Advancement;
-import net.roxeez.advancement.AdvancementCreator;
 import net.roxeez.advancement.AdvancementManager;
 import net.roxeez.advancement.display.FrameType;
 import org.bukkit.Bukkit;
@@ -13,8 +12,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,9 +27,6 @@ public class Toast {
 
     // Roxeez's AdvancementAPI manager instance for registering advancements
     private static AdvancementManager advancementManager;
-
-    // Cache of created toast advancements
-    private static final Map<String, AdvancementCreator> cachedToastAdvancements = new HashMap<>();
 
     @NotNull
     private final JavaPlugin plugin;
@@ -109,28 +103,36 @@ public class Toast {
     }
 
     /**
+     * Get the {@link NamespacedKey} of the toast advancement
+     *
+     * @return the advancement key, the plugin mapped to the id
+     */
+    @NotNull
+    private NamespacedKey getKey() {
+        return Objects.requireNonNull(NamespacedKey.fromString(getId(), plugin));
+    }
+
+    /**
      * Get the ID value of the toast. This comprises the {@link #ADVANCEMENT_KEY}/A {@link UUID} seeded based on the value of
      * the {@link #getLegacyTitleText() legacy-text title} and {@link #getLegacyDescriptionText() description}.
      *
      * @return the ID value of the toast advancement
      */
-    @NotNull String getId() {
-        return ADVANCEMENT_KEY + "/" + UUID.nameUUIDFromBytes((getLegacyTitleText()
-                                                               + getLegacyDescriptionText()).getBytes());
+    @NotNull
+    String getId() {
+        return ADVANCEMENT_KEY + "/" + UUID.nameUUIDFromBytes((getLegacyTitleText() + getLegacyDescriptionText()).getBytes());
     }
 
     /**
      * Get the {@link Advancement} used to send this toast
      */
     private void prepareAdvancement() {
-        final String advancementId = getId();
-        if (cachedToastAdvancements.containsKey(advancementId)) {
+        if (Bukkit.getAdvancement(getKey()) != null) {
             return;
         }
 
         final ToastAdvancement advancement = new ToastAdvancement(plugin, this);
         advancementManager.register(advancement);
-        cachedToastAdvancements.put(advancementId, advancement);
         advancementManager.createAll(false);
     }
 
@@ -155,8 +157,7 @@ public class Toast {
         Bukkit.getScheduler().runTask(plugin, () -> {
             prepareAdvancement();
 
-            final org.bukkit.advancement.Advancement advancement = Bukkit.getAdvancement(
-                    Objects.requireNonNull(NamespacedKey.fromString(getId(), plugin)));
+            final org.bukkit.advancement.Advancement advancement = Bukkit.getAdvancement(getKey());
             if (advancement == null) {
                 throw new IllegalStateException("Advancement not found");
             }
