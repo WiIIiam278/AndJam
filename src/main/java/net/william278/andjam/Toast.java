@@ -3,18 +3,19 @@ package net.william278.andjam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.roxeez.advancement.Advancement;
+import net.roxeez.advancement.AdvancementCreator;
 import net.roxeez.advancement.AdvancementManager;
 import net.roxeez.advancement.display.FrameType;
-import net.roxeez.advancement.trigger.Impossible;
-import net.roxeez.advancement.trigger.TriggerType;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -31,7 +32,7 @@ public class Toast {
     private static AdvancementManager advancementManager;
 
     // Cache of created toast advancements
-    private static final Map<String, Advancement> cachedToastAdvancements = new HashMap<>();
+    private static final Map<String, AdvancementCreator> cachedToastAdvancements = new HashMap<>();
 
     @NotNull
     private final JavaPlugin plugin;
@@ -68,20 +69,12 @@ public class Toast {
     }
 
     /**
-     * Acceptor for the dummy advancement criteria
-     *
-     * @param trigger the trigger
-     */
-    private static void accept(Impossible trigger) {
-    }
-
-    /**
      * Get the title, formatted as a legacy string
      *
      * @return the title
      */
     @NotNull
-    private String getLegacyTitleText() {
+    final String getLegacyTitleText() {
         return LegacyComponentSerializer.legacySection().serialize(title);
     }
 
@@ -91,8 +84,28 @@ public class Toast {
      * @return the description
      */
     @NotNull
-    private String getLegacyDescriptionText() {
+    final String getLegacyDescriptionText() {
         return LegacyComponentSerializer.legacySection().serialize(description);
+    }
+
+    /**
+     * Get the icon material
+     *
+     * @return the icon {@link Material} type
+     */
+    @NotNull
+    final Material getIcon() {
+        return icon;
+    }
+
+    /**
+     * Get the toast frame type
+     *
+     * @return the frame type
+     */
+    @NotNull
+    final FrameType getFrameType() {
+        return frameType;
     }
 
     /**
@@ -101,41 +114,24 @@ public class Toast {
      *
      * @return the ID value of the toast advancement
      */
-    @NotNull
-    private String getId() {
+    @NotNull String getId() {
         return ADVANCEMENT_KEY + "/" + UUID.nameUUIDFromBytes((getLegacyTitleText()
-                + getLegacyDescriptionText()).getBytes());
+                                                               + getLegacyDescriptionText()).getBytes());
     }
 
     /**
      * Get the {@link Advancement} used to send this toast
-     *
-     * @return the advancement
      */
-    @NotNull
-    private Advancement getAdvancement() {
+    private void prepareAdvancement() {
         final String advancementId = getId();
         if (cachedToastAdvancements.containsKey(advancementId)) {
-            return cachedToastAdvancements.get(advancementId);
+            return;
         }
 
-        // Register the advancement
-        final Advancement advancement = new Advancement(plugin, advancementId);
-        advancement.addCriteria("display_toast", TriggerType.IMPOSSIBLE, Toast::accept);
-        advancement.setDisplay(toast -> {
-            toast.setTitle(getLegacyTitleText());
-            toast.setDescription(getLegacyDescriptionText());
-            toast.setIcon(icon);
-            toast.setAnnounce(false);
-            toast.setToast(true);
-            toast.setHidden(true);
-            toast.setFrame(frameType);
-        });
+        final ToastAdvancement advancement = new ToastAdvancement(plugin, this);
         advancementManager.register(advancement);
         cachedToastAdvancements.put(advancementId, advancement);
         advancementManager.createAll(false);
-
-        return advancement;
     }
 
     /**
@@ -153,18 +149,24 @@ public class Toast {
      * Send the toast to a player, by granting then revoking the dummy advancement
      *
      * @param player the player to send the toast to
+     * @throws IllegalStateException if the toast advancement could not be created
      */
-    public void show(@NotNull Player player) {
+    public void show(@NotNull Player player) throws IllegalStateException {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            final Advancement advancementData = getAdvancement();
-            final org.bukkit.advancement.Advancement advancement = Bukkit.getAdvancement(advancementData.getKey());
+            prepareAdvancement();
+
+            final org.bukkit.advancement.Advancement advancement = Bukkit.getAdvancement(
+                    Objects.requireNonNull(NamespacedKey.fromString(getId(), plugin)));
             if (advancement == null) {
                 throw new IllegalStateException("Advancement not found");
             }
-            advancement.getCriteria().forEach(criterion ->
-                    player.getAdvancementProgress(advancement).awardCriteria(criterion));
-            advancement.getCriteria().forEach(criterion ->
-                    player.getAdvancementProgress(advancement).revokeCriteria(criterion));
+
+            // Grant the advancement to the player
+            player.getAdvancementProgress(advancement).awardCriteria(ToastAdvancement.CRITERIA_NAME);
+
+            // Revoke the advancement from the player
+            Bukkit.getScheduler().runTaskLater(plugin, () -> player.getAdvancementProgress(advancement)
+                    .revokeCriteria(ToastAdvancement.CRITERIA_NAME), 1);
         });
     }
 }
