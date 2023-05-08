@@ -30,6 +30,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import space.arim.morepaperlib.MorePaperLib;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -50,6 +51,8 @@ public class Toast {
     @NotNull
     private final JavaPlugin plugin;
     @NotNull
+    private final MorePaperLib paperLib;
+    @NotNull
     private final Material icon;
     @NotNull
     private final Component title;
@@ -68,10 +71,10 @@ public class Toast {
      * @param frameType   The frame type of the toast
      * @see Toaster
      */
-    protected Toast(@NotNull JavaPlugin plugin,
-                    @NotNull Component name, @NotNull Component description,
+    protected Toast(@NotNull JavaPlugin plugin, @NotNull Component name, @NotNull Component description,
                     @NotNull Material icon, @NotNull FrameType frameType) {
         this.plugin = plugin;
+        this.paperLib = new MorePaperLib(plugin);
         this.title = name;
         this.description = description;
         this.icon = icon;
@@ -149,9 +152,7 @@ public class Toast {
         if (Bukkit.getAdvancement(getKey()) != null) {
             return;
         }
-
-        final ToastAdvancement advancement = new ToastAdvancement(plugin, this);
-        advancementManager.register(advancement);
+        advancementManager.register(new ToastAdvancement(plugin, this));
         advancementManager.createAll(false);
     }
 
@@ -167,13 +168,13 @@ public class Toast {
     }
 
     /**
-     * Send the toast to a player, by granting then revoking the dummy advancement
+     * Send the toast to a player, by granting then revoking the advancement trigger
      *
      * @param player the player to send the toast to
      * @throws IllegalStateException if the toast advancement could not be created
      */
     public void show(@NotNull Player player) throws IllegalStateException {
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        paperLib.scheduling().entitySpecificScheduler(player).run(() -> {
             prepareAdvancement();
 
             final org.bukkit.advancement.Advancement advancement = Bukkit.getAdvancement(getKey());
@@ -185,8 +186,12 @@ public class Toast {
             player.getAdvancementProgress(advancement).awardCriteria(ToastAdvancement.CRITERIA_NAME);
 
             // Revoke the advancement from the player
-            Bukkit.getScheduler().runTaskLater(plugin, () -> player.getAdvancementProgress(advancement)
-                    .revokeCriteria(ToastAdvancement.CRITERIA_NAME), 1);
+            paperLib.scheduling().entitySpecificScheduler(player)
+                    .runDelayed(() -> player.getAdvancementProgress(advancement)
+                            .revokeCriteria(ToastAdvancement.CRITERIA_NAME), () -> {
+                    }, 1L);
+        }, () -> {
+            // Do nothing if the player is offline
         });
     }
 }

@@ -34,16 +34,16 @@ public class ToastAdvancement implements AdvancementCreator {
 
     private final JavaPlugin plugin;
     private final Toast toast;
-
     static final String CRITERIA_NAME = "display_toast";
 
-    ToastAdvancement(@NotNull JavaPlugin plugin, @NotNull Toast toast) {
+    protected ToastAdvancement(@NotNull JavaPlugin plugin, @NotNull Toast toast) {
         this.plugin = plugin;
         this.toast = toast;
     }
 
     @Override
-    public @NotNull Advancement create(@NotNull Context context) {
+    @NotNull
+    public Advancement create(@NotNull Context context) {
         // Register the advancement
         final Advancement advancement = new Advancement(plugin, toast.getId());
 
@@ -63,7 +63,7 @@ public class ToastAdvancement implements AdvancementCreator {
     }
 
     /**
-     * Acceptor for the dummy advancement criteria
+     * Acceptor for the impossible advancement criteria
      *
      * @param trigger the trigger
      */
